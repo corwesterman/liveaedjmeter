@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>nl.westerman.liveaed</groupId>
+    <artifactId>live-aed-test-jmeter</artifactId>
+    <packaging>pom</packaging>
+    <version>0.0.1</version>
+    <description>
+        Executes a JMeter test on Live-aed.nl
+        Author : Cor Westerman (0652005336)
+        Invoke with "mvn clean verify -Pnon-distributed-testing -Dperformancetest.environment=INTERNET -Dperformancetest.load.throughput=600 -Dperformancetest.duration=60"
+    </description>
+    <properties>
+        <!-- Basename of JMeter Testplans -->
+        <jmeter.testscript.basename>live-aed-testplan</jmeter.testscript.basename>
+
+        <!-- Plugin versions -->
+        <jmeter.maven.plugin.version>2.0.3</jmeter.maven.plugin.version>
+        <jmeter.plugins.version>1.4.0</jmeter.plugins.version>
+        <jmeter.analysis.maven.plugin>1.0.6</jmeter.analysis.maven.plugin>
+        <jmeter.graph.maven.plugin>0.1.0</jmeter.graph.maven.plugin>
+    </properties>
+
+    <profiles>
+     
+           
+        <profile>
+            <!-- Profile for Non Distributed testing -->
+            <id>non-distributed-testing</id>
+            <properties>
+                <performancetest.workspace.path>${project.basedir}</performancetest.workspace.path>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <!-- For more info about this plugin: https://github.com/jmeter-maven-plugin/jmeter-maven-plugin/wiki
+                        Advanced: https://github.com/jmeter-maven-plugin/jmeter-maven-plugin/wiki/Advanced-Configuration -->
+                        <groupId>com.lazerycode.jmeter</groupId>
+                        <artifactId>jmeter-maven-plugin</artifactId>
+                        <version>${jmeter.maven.plugin.version}</version>
+
+                        <configuration>
+							<!-- Testplan Directory -->
+                            <testFilesDirectory>${project.basedir}/src/test/jmeter/testplans/</testFilesDirectory>
+
+                            <!-- Test Files to include for testing -->
+                            <testFilesIncluded>
+                                <jMeterTestFile>${jmeter.testscript.basename}.jmx</jMeterTestFile>
+                            </testFilesIncluded>
+
+                            <!-- Results Directory -->
+                            <resultsDirectory>${project.build.directory}/jmeter/results</resultsDirectory>
+                            <testResultsTimestamp>false</testResultsTimestamp>
+
+                            <suppressJMeterOutput>false</suppressJMeterOutput>
+                            <ignoreResultFailures>true</ignoreResultFailures>
+
+                            <!-- Properties JMeter -->
+                            <propertiesJMeter>
+                                <jmeter.save.saveservice.thread_counts>true</jmeter.save.saveservice.thread_counts>
+                            </propertiesJMeter>
+
+                            <propertiesUser>
+                                <!-- JMeter User Properties parsed by Maven using Jenkins -->
+                                <pt.duration>${performancetest.duration}</pt.duration>
+                                <pt.load.throughput>${performancetest.load.throughput}</pt.load.throughput>
+                                <pt.environment>${performancetest.environment}</pt.environment>
+                                <pt.workspace.path>${performancetest.workspace.path}</pt.workspace.path>
+                            </propertiesUser>
+
+                            <!-- These jmeter plugins are copied to lib/ext -->
+                            <!-- Extensions to lib/ext -->
+                            <jmeterExtensions>
+                                <jmeterExtension>kg.apc:jmeter-plugins:pom:${jmeter.plugins.version}</jmeterExtension>
+                                <jmeterExtension>kg.apc:jmeter-plugins-standard:jar:${jmeter.plugins.version}</jmeterExtension>
+                                <jmeterExtension>kg.apc:jmeter-plugins-extras:jar:${jmeter.plugins.version}</jmeterExtension>
+                                <jmeterExtension>kg.apc:jmeter-plugins-extras-libs:jar:${jmeter.plugins.version}</jmeterExtension>
+                            </jmeterExtensions>
+
+                            <!-- JVM Settings (increase if needed) -->
+                            <jMeterProcessJVMSettings>
+                                <xms>512</xms>
+                                <xmx>512</xmx>
+                                <!--<arguments>-->
+                                <!--<argument>-Xprof</argument>-->
+                                <!--<argument>-Xfuture</argument>-->
+                                <!--</arguments>-->
+                            </jMeterProcessJVMSettings>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>execute-jmeter-tests</id>
+                                <goals>
+                                    <goal>jmeter</goal>
+                                </goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <!-- Analyse JMeter JTL and create html report
+                             For more info about this plugin: https://github.com/afranken/jmeter-analysis-maven-plugin -->
+                        <groupId>com.lazerycode.jmeter</groupId>
+                        <artifactId>jmeter-analysis-maven-plugin</artifactId>
+                        <version>${jmeter.analysis.maven.plugin}</version>
+                        <configuration>
+                            <source>${project.build.directory}/jmeter/results/${jmeter.testscript.basename}.jtl</source>
+                            <targetDirectory>${project.build.directory}/jmeter/results</targetDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>create-html-report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>analyze</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <!-- For more info about this plugin: https://github.com/codecentric/jmeter-graph-maven-plugin -->
+                        <groupId>de.codecentric</groupId>
+                        <artifactId>jmeter-graph-maven-plugin</artifactId>
+                        <version>${jmeter.graph.maven.plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>create-graph-threads</id>
+                                <goals>
+                                    <goal>create-graph</goal>
+                                </goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <inputFile>${project.build.directory}/jmeter/results/${jmeter.testscript.basename}.jtl</inputFile>
+                            <graphs>
+                                <graph>
+                                    <pluginType>ThreadsStateOverTime</pluginType>
+                                    <width>800</width>
+                                    <height>600</height>
+                                    <outputFile>${project.build.directory}/jmeter/results/${jmeter.testscript.basename}-ThreadsStateOverTime.png</outputFile>
+                                </graph>
+                                <graph>
+                                    <pluginType>ResponseTimesOverTime</pluginType>
+                                    <width>800</width>
+                                    <height>600</height>
+                                    <outputFile>${project.build.directory}/jmeter/results/${jmeter.testscript.basename}-ResponseTimesOverTime.png</outputFile>
+                                </graph>
+                                <graph>
+                                    <pluginType>TransactionsPerSecond</pluginType>
+                                    <width>800</width>
+                                    <height>600</height>
+                                    <outputFile>${project.build.directory}/jmeter/results/${jmeter.testscript.basename}-TransactionsPerSecond.png</outputFile>
+                                </graph>
+                            </graphs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
